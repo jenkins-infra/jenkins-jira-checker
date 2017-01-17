@@ -1,0 +1,10 @@
+{
+  "frameworks": {
+    "net46":{
+      "dependencies": {
+        "Octokit": "0.23.0",
+        "Atlassian.SDK": "9.2.0"
+      }
+    }
+   }
+}
