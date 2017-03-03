@@ -385,11 +385,11 @@ public static void CheckParentInfo(XDocument doc, HashSet<VerificationMessage> h
 
             var versionNode = parentNode.Element(ns + "version");
             if(versionNode != null && versionNode.Value != null) {
-                var jenkinsVersion = new VersionInfo(versionNode.Value);
+                var jenkinsVersion = new Version(versionNode.Value);
                 if(jenkinsVersion.Major == 2) {
                     versionNode = doc.Element(ns + "project").Element(ns + "properties").Element(ns + "jenkins.version");
                     if(versionNode != null && versionNode.Value != null) {
-                        jenkinsVersion = new VersionInfo(versionNode.Value);
+                        jenkinsVersion = new Version(versionNode.Value);
                     }
 
                     if(jenkinsVersion.Build <= 0) {
@@ -397,7 +397,7 @@ public static void CheckParentInfo(XDocument doc, HashSet<VerificationMessage> h
                         + "it's preferable to use an LTS version as parent version."));
                     }
                 } else {
-                    hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The parent pom version '{0}' should be at least 2.11 or higher", jenkinsVersion);
+                    hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The parent pom version '{0}' should be at least 2.11 or higher", jenkinsVersion));
                 }
             }
         }
