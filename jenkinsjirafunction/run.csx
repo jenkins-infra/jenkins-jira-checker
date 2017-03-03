@@ -79,6 +79,12 @@ public static async Task<HttpResponseMessage> Run(HttpRequestMessage req, TraceW
         /*{ "Gradle", VerifyGradle }*/
     };
 
+    var debugSetting = GetEnvironmentVariable("DEBUG");
+    if(!string.IsNullOrWhiteSpace(debugSetting)) {
+        debug = true;
+        log.Info("Running in debug mode");
+    }
+
     // Get request body
     dynamic data = await req.Content.ReadAsAsync<object>();
 
@@ -211,6 +217,7 @@ public static async Task<object> VerifyGitHubInfo(Atlassian.Jira.Issue issue, Ha
     if(!string.IsNullOrWhiteSpace(userList)) {
         var users = userList.Split(new char[] { '\n', ';', ','}, StringSplitOptions.RemoveEmptyEntries);
         var invalidUsers = new List<string>();
+        var orgs = new List<string>();
         foreach(var user in users) {
             try {
                 var ghUser = await ghClient.User.Get(user.Trim());
@@ -218,12 +225,23 @@ public static async Task<object> VerifyGitHubInfo(Atlassian.Jira.Issue issue, Ha
                     invalidUsers.Add(user.Trim());
                 }
             } catch(Exception) {
-                invalidUsers.Add(user.Trim());
+                try {
+                    var ghOrg = await ghClient.Organization.Get(user.Trim());
+                    if(ghOrg != null) {
+                        orgs.Add(user.Trim());
+                    }
+                } catch {
+                    invalidUsers.Add(user.Trim());
+                }
             }
         }
 
         if(invalidUsers.Count > 0) {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The following usernames in 'GitHub Users to Authorize as Committers' are not valid GitHub usernames: {0}", string.Join(",", invalidUsers.ToArray())));
+        }
+
+        if(orgs.Count > 0) {
+            hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The following names in 'GitHub Users to Authorize as Committers' are organizations instead of users, this is not supported: {0}", string.Join(",", orgs.ToArray())));
         }
     }
 
@@ -233,6 +251,12 @@ public static async Task<object> VerifyGitHubInfo(Atlassian.Jira.Issue issue, Ha
             string owner = m.Groups[1].Value;
             string repoName = m.Groups[2].Value;
             Repository repo = null;
+
+            if(repoName.EndsWith(".git")) {
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The origin repositor '{0}' ends in .git, please remove this", forkFrom));
+                repoName = repoName.Substring(0, repoName.Length - 4);
+            }
+
             try {
                 repo = await ghClient.Repository.Get(owner, repoName);
             } catch(Exception) {
@@ -244,6 +268,16 @@ public static async Task<object> VerifyGitHubInfo(Atlassian.Jira.Issue issue, Ha
                     var readme = ghClient.Repository.Content.GetReadme(owner, repoName);
                 } catch(Octokit.NotFoundException) {
                     hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "Repository '{0}' does not contain a README.", forkFrom));
+                }
+
+                // check if the repo was originally forked from jenkinsci
+                try {
+                    Repository parent = repo.Parent;
+                    if(parent != null && parent.FullName.StartsWith("jenkinsci")) {
+                        hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "Repository '{0}' is currently showing as forked from a jenkinsci org repository, this relationship needs to be broken", forkFrom));
+                    }
+                } catch {
+
                 }
             } else {
                 hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, INVALID_FORK_FROM, forkFrom));
@@ -344,9 +378,27 @@ public static void CheckParentInfo(XDocument doc, HashSet<VerificationMessage> h
     try {
         var parentNode = doc.Element(ns + "project").Element(ns + "parent");
         if(parentNode != null) {
-            var groupIdNode = parentNode.Element("groupId");
+            var groupIdNode = parentNode.Element(ns + "groupId");
             if(groupIdNode != null && groupIdNode.Value != null && groupIdNode.Value != "org.jenkins-ci.plugins") {
                 hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The groupId for your parent pom is not \"org.jenkins-ci.plugins\"."));
+            }
+
+            var versionNode = parentNode.Element(ns + "version");
+            if(versionNode != null && versionNode.Value != null) {
+                var jenkinsVersion = new VersionInfo(versionNode.Value);
+                if(jenkinsVersion.Major == 2) {
+                    versionNode = doc.Element(ns + "project").Element(ns + "properties").Element(ns + "jenkins.version");
+                    if(versionNode != null && versionNode.Value != null) {
+                        jenkinsVersion = new VersionInfo(versionNode.Value);
+                    }
+
+                    if(jenkinsVersion.Build <= 0) {
+                        hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Info, "Your plugin does not seem to have a LTS Jenkins release. In general, "
+                        + "it's preferable to use an LTS version as parent version."));
+                    }
+                } else {
+                    hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The parent pom version '{0}' should be at least 2.11 or higher", jenkinsVersion);
+                }
             }
         }
     } catch(Exception ex) {
