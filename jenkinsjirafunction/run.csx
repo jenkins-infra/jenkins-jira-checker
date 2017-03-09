@@ -205,6 +205,10 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
         if(!forkToLower.EndsWith("-plugin")) {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "'New Repository Name' must end with \"-plugin\" (disregard if you are not requesting hosting of a plugin)"));
         }
+
+        if(forkToLower != forkTo) {
+            hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The 'New Repository Name' ({0}) must be all lowercase", forkTo));
+        }
     }
     return null;
 }
@@ -312,7 +316,7 @@ public static async Task<object> VerifyMaven(Atlassian.Jira.Issue issue, HashSet
                         }
                         CheckParentInfo(doc, hostingIssues, log);
                         CheckName(doc, hostingIssues, log);
-                        CheckLicenses(doc, hostingIssues, log);
+                        CheckLicenses(ghClient, doc, hostingIssues, log);
                     } catch(Exception ex) {
                         log.Info(string.Format("Exception occured trying to look at pom.xml: {0}", ex.ToString()));
                         hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, INVALID_POM));
@@ -340,7 +344,11 @@ public static void CheckArtifactId(XDocument doc, string forkTo, HashSet<Verific
             }
 
             if(artifactId.ToLower().Contains("jenkins")) {
-                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <artifactId> from the pom.xml ({0}) should not contain \"Jenkins\""));
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <artifactId> from the pom.xml ({0}) should not contain \"Jenkins\"", artifactId));
+            }
+
+            if(artifactId.ToLower() != artifactId) {
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <artifactId> from the pom.xml ({0}) should be all lower case", artifactId));
             }
         } else {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The pom.xml file does not contain a valid <artifactId> for the project"));
@@ -363,6 +371,10 @@ public static void CheckName(XDocument doc, HashSet<VerificationMessage> hosting
 
             if(name.ToLower().Contains("jenkins")) {
                 hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <name> should not contain \"Jenkins\""));
+            }
+
+            if(name.ToLower() != name) {
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <name> from the pom.xml ({0}) should be all lower case", name));
             }
         } else {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The pom.xml file does not contain a valid <name> for the project"));
