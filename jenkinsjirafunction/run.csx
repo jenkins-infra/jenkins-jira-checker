@@ -117,8 +117,10 @@ public static async Task<HttpResponseMessage> Run(HttpRequestMessage req, TraceW
         var msg = new StringBuilder("Hello from your friendly Jenkins Hosting Checker\n\n");
         log.Info("Checking if there were errors");
         if(hostingIssues.Count > 0) {
-            msg.AppendLine("It appears you have some issues with your hosting request. Please see the list below and"
-                        + " correct all issues. Your hosting request will not be approved until these issues are corrected.\n");
+            msg.AppendLine("It appears you have some issues with your hosting request. Please see the list below and "
+                        + "correct all issues marked {color:red}REQUIRED{color}. Your hosting request will not be " 
+                        + "approved until these issues are corrected. Issues marked with {color:orange}WARNING{color} "
+                        + "or INFO are just recommendations and will not stall the hosting process.\n");
             log.Info("Appending issues to msg");
             AppendIssues(msg, hostingIssues, 1);
         } else {
