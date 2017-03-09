@@ -372,10 +372,6 @@ public static void CheckName(XDocument doc, HashSet<VerificationMessage> hosting
             if(name.ToLower().Contains("jenkins")) {
                 hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <name> should not contain \"Jenkins\""));
             }
-
-            if(name.ToLower() != name) {
-                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <name> from the pom.xml ({0}) should be all lower case", name));
-            }
         } else {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The pom.xml file does not contain a valid <name> for the project"));
         }
