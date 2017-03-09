@@ -316,7 +316,7 @@ public static async Task<object> VerifyMaven(Atlassian.Jira.Issue issue, HashSet
                         }
                         CheckParentInfo(doc, hostingIssues, log);
                         CheckName(doc, hostingIssues, log);
-                        CheckLicenses(ghClient, doc, hostingIssues, log);
+                        CheckLicenses(doc, hostingIssues, log);
                     } catch(Exception ex) {
                         log.Info(string.Format("Exception occured trying to look at pom.xml: {0}", ex.ToString()));
                         hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, INVALID_POM));
