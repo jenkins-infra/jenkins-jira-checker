@@ -207,6 +207,10 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
         if(!forkToLower.EndsWith("-plugin")) {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "'New Repository Name' must end with \"-plugin\" (disregard if you are not requesting hosting of a plugin)"));
         }
+
+        if(forkToLower != forkTo) {
+            hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The 'New Repository Name' ({0}) must be all lowercase", forkTo));
+        }
     }
     return null;
 }
@@ -342,7 +346,11 @@ public static void CheckArtifactId(XDocument doc, string forkTo, HashSet<Verific
             }
 
             if(artifactId.ToLower().Contains("jenkins")) {
-                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <artifactId> from the pom.xml ({0}) should not contain \"Jenkins\""));
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <artifactId> from the pom.xml ({0}) should not contain \"Jenkins\"", artifactId));
+            }
+
+            if(artifactId.ToLower() != artifactId) {
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The <artifactId> from the pom.xml ({0}) should be all lower case", artifactId));
             }
         } else {
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The pom.xml file does not contain a valid <artifactId> for the project"));
