@@ -333,16 +333,18 @@ public static async Task<object> VerifyMaven(Atlassian.Jira.Issue issue, HashSet
                     // the pom.xml file should be text, so we can just use .Content
                     try {
                         var doc = XDocument.Parse(pomXml[0].Content);
-                        var modulesNode = doc.Element(ns + "project")?.Element(ns + "modules");
-                        if(modulesNode != null) {
-                            foreach(var moduleNode in modulesNode.Elements(ns + "module")) {
-                                pomXml = await ghClient.Repository.Content.GetAllContents(owner, repoName, moduleNode.Value + "/pom.xml");
-                                if(pomXml.Count > 0) {
-                                    doc = XDocument.Parse(pomXml[0].Content);
-                                    if(doc.Element(ns + "project")?.Element())
-                                }
-                            }
-                        }
+                        // var modulesNode = doc.Element(ns + "project")?.Element(ns + "modules");
+                        // if(modulesNode != null) {
+                        //     foreach(var moduleNode in modulesNode.Elements(ns + "module")) {
+                        //         pomXml = await ghClient.Repository.Content.GetAllContents(owner, repoName, moduleNode.Value + "/pom.xml");
+                        //         if(pomXml.Count > 0) {
+                        //             doc = XDocument.Parse(pomXml[0].Content);
+                        //             if(doc.Element(ns + "project")?.Element()) {
+
+                        //             }
+                        //         }
+                        //     }
+                        // }
 
                         if(!string.IsNullOrWhiteSpace(forkTo)) {
                             CheckArtifactId(doc, forkTo, hostingIssues, log);
