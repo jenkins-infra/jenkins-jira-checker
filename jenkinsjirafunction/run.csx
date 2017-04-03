@@ -173,15 +173,27 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
     var userList = issue["GitHub Users to Authorize as Committers"]?.Value;
     var forkFrom = issue["Repository URL"]?.Value;
     var forkTo = issue["New Repository Name"]?.Value;
-    
+    bool hasUpdate = false;
+
     // check list of users
     if(string.IsNullOrWhiteSpace(userList)) {
         hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "Missing list of users to authorize in 'GitHub Users to Authorize as Committers'"));
+    } else {
+        if(userList.Contains(" ")) {
+            userList = userList.Replace(" ", "\n");
+            issue["GitHub Users to Authorize as Committers"].Value = userList;
+            hasUpdate = true;
+        }
     }
 
     if(string.IsNullOrWhiteSpace(forkFrom)) {
         hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, INVALID_FORK_FROM, ""));
     } else {
+        if(forkFrom.EndsWith(".git")) {
+            issue["Repository URL"].Value = forkFrom = forkFrom.Substring(0, forkFrom.Length - 4);
+            hasUpdate = true;
+        }
+
         // check the repo they want to fork from to make sure it conforms
         var m = Regex.Match(forkFrom, @"(?:https:\/\/github\.com/)?(\S+)\/(\S+)", RegexOptions.IgnoreCase);
         if(!m.Success) {
@@ -201,7 +213,8 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
     } else {
         var forkToLower = forkTo.ToLower();
         if(forkToLower.Contains("jenkins") || forkToLower.Contains("hudson")) {
-            hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "'New Repository Name' must NOT include jenkins or hudson"));
+            forkToLower = forkToLower.Replace("jenkins", string.Empty).Replace("hudson", string.Empty);
+            hasUpdate = true;
         }
 
         if(!forkToLower.EndsWith("-plugin")) {
@@ -209,8 +222,13 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
         }
 
         if(forkToLower != forkTo) {
-            hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The 'New Repository Name' ({0}) must be all lowercase", forkTo));
+            issue["New Repository Name"].Value = forkToLower;
+            hasUpdate = true;
         }
+    }
+
+    if(hasUpdate) {
+        issue.SaveChanges();
     }
     return null;
 }
@@ -259,7 +277,7 @@ public static async Task<object> VerifyGitHubInfo(Atlassian.Jira.Issue issue, Ha
             Repository repo = null;
 
             if(repoName.EndsWith(".git")) {
-                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The origin repositor '{0}' ends in .git, please remove this", forkFrom));
+                hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "The origin repository '{0}' ends in .git, please remove this", forkFrom));
                 repoName = repoName.Substring(0, repoName.Length - 4);
             }
 
@@ -310,9 +328,22 @@ public static async Task<object> VerifyMaven(Atlassian.Jira.Issue issue, HashSet
             try {
                 var pomXml = await ghClient.Repository.Content.GetAllContents(owner, repoName, "pom.xml");
                 if(pomXml.Count > 0) {
+                    XNamespace ns = "http://maven.apache.org/POM/4.0.0";
+
                     // the pom.xml file should be text, so we can just use .Content
                     try {
                         var doc = XDocument.Parse(pomXml[0].Content);
+                        var modulesNode = doc.Element(ns + "project")?.Element(ns + "modules");
+                        if(modulesNode != null) {
+                            foreach(var moduleNode in modulesNode.Elements(ns + "module")) {
+                                pomXml = await ghClient.Repository.Content.GetAllContents(owner, repoName, moduleNode.Value + "/pom.xml");
+                                if(pomXml.Count > 0) {
+                                    doc = XDocument.Parse(pomXml[0].Content);
+                                    if(doc.Element(ns + "project")?.Element())
+                                }
+                            }
+                        }
+
                         if(!string.IsNullOrWhiteSpace(forkTo)) {
                             CheckArtifactId(doc, forkTo, hostingIssues, log);
                         }
