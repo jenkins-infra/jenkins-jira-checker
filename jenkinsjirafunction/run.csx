@@ -221,6 +221,7 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "'New Repository Name' must end with \"-plugin\" (disregard if you are not requesting hosting of a plugin)"));
         }
 
+        // we don't like spaces...
         if(forkToLower.Contains(" ")) {
             forkToLower = forkToLower.Replace(" ", "-");
         }
