@@ -181,7 +181,7 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
     } else {
         if(userList.Contains(" ")) {
             userList = userList.Replace(" ", "\n");
-            issue["GitHub Users to Authorize as Committers"].Value = userList;
+            issue["GitHub Users to Authorize as Committers"] = userList;
             hasUpdate = true;
         }
     }
@@ -190,7 +190,7 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
         hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, INVALID_FORK_FROM, ""));
     } else {
         if(forkFrom.EndsWith(".git")) {
-            issue["Repository URL"].Value = forkFrom = forkFrom.Substring(0, forkFrom.Length - 4);
+            issue["Repository URL"] = forkFrom = forkFrom.Substring(0, forkFrom.Length - 4);
             hasUpdate = true;
         }
 
@@ -222,14 +222,13 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
         }
 
         if(forkToLower != forkTo) {
-            issue["New Repository Name"].Value = forkToLower;
+            issue["New Repository Name"] = forkToLower;
             hasUpdate = true;
         }
     }
 
     if(hasUpdate) {
         issue.SaveChanges();
-        issue.Refresh();
     }
     return null;
 }
