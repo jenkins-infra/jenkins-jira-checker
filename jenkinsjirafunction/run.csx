@@ -228,6 +228,7 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
     }
 
     if(hasUpdate) {
+        log.Info("Updating issue!");
         issue.SaveChanges();
     }
     return null;
