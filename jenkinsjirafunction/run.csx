@@ -221,6 +221,10 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
             hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, "'New Repository Name' must end with \"-plugin\" (disregard if you are not requesting hosting of a plugin)"));
         }
 
+        if(forkToLower.Contains(" ")) {
+            forkToLower = forkToLower.Replace(" ", "-");
+        }
+
         if(forkToLower != forkTo) {
             issue["New Repository Name"] = forkToLower;
             hasUpdate = true;
