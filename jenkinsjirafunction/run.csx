@@ -207,10 +207,16 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
             new VerificationMessage(VerificationMessage.Severity.Required, "It must end in -plugin if hosting request is for a Jenkins plugin."),
             new VerificationMessage(VerificationMessage.Severity.Required, "It must be all lowercase."),
             new VerificationMessage(VerificationMessage.Severity.Required, "It must NOT contain \"Jenkins\"."),
-            new VerificationMessage(VerificationMessage.Severity.Required, "It must use hyphens ( - ) instead of spaces.")
+            new VerificationMessage(VerificationMessage.Severity.Required, "It must use hyphens ( - ) instead of spaces or camel case.")
         };
         hostingIssues.Add(new VerificationMessage(VerificationMessage.Severity.Required, subitems, "You must specify the repository name to fork to in 'New Repository Name' field with the following rules:"));
     } else {
+        // we don't like camel case - ThisIsCamelCase becomes this-is-camel-case
+        var camelCaseRegex = new Regex(@"(\B[A-Z]+?(?=[A-Z][^A-Z])|\B[A-Z]+?(?=[^A-Z]))");
+        if(camelCaseRegex.IsMatch(forkTo)) {
+            forkTo = camelCaseRegex.Replace(forkTo, "-$1");
+        }
+
         var forkToLower = forkTo.ToLower();
         if(forkToLower.Contains("jenkins") || forkToLower.Contains("hudson")) {
             forkToLower = forkToLower.Replace("jenkins", string.Empty).Replace("hudson", string.Empty);
@@ -224,7 +230,7 @@ public static async Task<object> VerifyJiraFields(Atlassian.Jira.Issue issue, Ha
         // we don't like spaces...
         if(forkToLower.Contains(" ")) {
             forkToLower = forkToLower.Replace(" ", "-");
-        }
+        }        
 
         if(forkToLower != forkTo) {
             issue["New Repository Name"] = forkToLower;
